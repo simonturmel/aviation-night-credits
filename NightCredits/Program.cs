@@ -11,12 +11,21 @@ namespace NightCredits
 {
     class Program
     {
+        private readonly static List<AirportModel> Airports = JsonConvert.DeserializeObject<List<AirportModel>>(File.ReadAllText(@"data/airports.json"));
+
         static void Main(string[] args)
         {
             do
             {
-                PrintSeparator();
-                Run();
+                try
+                {
+                    PrintSeparator();
+                    Run();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }                
             }
             while (Continue());
         }
@@ -54,6 +63,18 @@ namespace NightCredits
             Console.WriteLine();
         }
 
+        private static AirportModel GetAirport(string airportCode)
+        {
+            var airport =  Airports.FirstOrDefault(x => x.Code.ToUpper().Equals(airportCode));
+            
+            if (airport == null)
+            {
+                throw new Exception($"Could not find airport with ICAO code {airportCode}.");
+            }
+
+            return airport;
+        }
+
         private static string GetCredit(DateTime dateToEvaluate, SunriseSunsetModel previousDay, SunriseSunsetModel specifiedDay, SunriseSunsetModel nextDay)
         {
             var credit = "This event should be credited for DAY";
@@ -67,33 +88,10 @@ namespace NightCredits
             return credit;
         }
 
-        private static void LogDatesStack(DateTime dateToEvaluate, AirportModel airport, SunriseSunsetModel previousDay, SunriseSunsetModel specifiedDay, SunriseSunsetModel nextDay)
-        {
-            var events = new List<EventModel>()
-            {
-
-                new EventModel { DateTime = previousDay.TwilightSunrise, Label = "Day-1 Twilight Sunrise", Priority = 1 },
-                new EventModel { DateTime = previousDay.TwilightSunset, Label = "Day-1 Twilight Sunset", Priority = -1 },
-                new EventModel { DateTime = specifiedDay.TwilightSunrise, Label = "Day-0 Twilight Sunrise", Priority = 1 },
-                new EventModel { DateTime = specifiedDay.TwilightSunset, Label = "Day-0 Twilight Sunset", Priority = -1 },
-                new EventModel { DateTime = nextDay.TwilightSunrise, Label = "Day+1 Twilight Sunrise", Priority = 1 },
-                new EventModel { DateTime = nextDay.TwilightSunset, Label = "Day+1 Twilight Sunset", Priority = -1 },
-                new EventModel { DateTime = dateToEvaluate, Label = $"Event At {airport.Code}", Priority = 0 }
-            };
-
-            var sortedEvents = events.OrderBy(x => x.DateTime).ThenBy(x => x.Priority).ToList();
-
-            Console.WriteLine();
-            foreach (var sortedEvent in sortedEvents)
-            {
-                Console.WriteLine($"{sortedEvent.Label.PadRight(23, ' ') + ":"} {sortedEvent.DateTime}");
-            }
-        }
-
         private static SunriseSunsetModel GetDateSunriseSunsetAtAirport(DateTime dateTime, AirportModel airport)
         {
             var client = new RestClient("https://api.sunrise-sunset.org");
-            
+
             var request = new RestRequest("json", DataFormat.Json);
             request.AddParameter("lat", airport.Latitude);
             request.AddParameter("lng", airport.Longitude);
@@ -110,15 +108,52 @@ namespace NightCredits
             return null;
         }
 
-        private static AirportModel GetAirport(string airportCode)
+        private static void LogDatesStack(DateTime dateToEvaluate, AirportModel airport, SunriseSunsetModel previousDay, SunriseSunsetModel specifiedDay, SunriseSunsetModel nextDay)
         {
-            var airports = GetAirports();
-            return airports.FirstOrDefault(x => x.Code == airportCode);
+            var events = new List<EventModel>()
+            {
+
+                new EventModel { DateTime = previousDay.TwilightSunrise, Label = "Day-1 Twilight Sunrise", Priority = 1 },
+                new EventModel { DateTime = previousDay.TwilightSunset, Label = "Day-1 Twilight Sunset", Priority = -1 },
+                new EventModel { DateTime = specifiedDay.TwilightSunrise, Label = "Day-0 Twilight Sunrise", Priority = 1 },
+                new EventModel { DateTime = specifiedDay.TwilightSunset, Label = "Day-0 Twilight Sunset", Priority = -1 },
+                new EventModel { DateTime = nextDay.TwilightSunrise, Label = "Day+1 Twilight Sunrise", Priority = 1 },
+                new EventModel { DateTime = nextDay.TwilightSunset, Label = "Day+1 Twilight Sunset", Priority = -1 },
+                new EventModel { DateTime = dateToEvaluate, Label = $"Event At {airport.Code.ToUpper()}", Priority = 0 }
+            };
+
+            var sortedEvents = events.OrderBy(x => x.DateTime).ThenBy(x => x.Priority).ToList();
+
+            Console.WriteLine();
+            foreach (var sortedEvent in sortedEvents)
+            {
+                Console.WriteLine($"{sortedEvent.Label.PadRight(23, ' ') + ":"} {sortedEvent.DateTime}");
+            }
         }
 
-        private static List<AirportModel> GetAirports()
+        private static string ReadAirportCode()
         {
-            return JsonConvert.DeserializeObject<List<AirportModel>>(File.ReadAllText(@"data/airports.json"));
+            Console.Write("Enter airport ICAO code: ");
+            var airport = Console.ReadLine().ToUpper();
+            if (string.IsNullOrEmpty(airport) || airport.Length != 4)
+            {
+                throw new Exception("Invalid airport ICAO code entered. Aiport ICAO code must have 4 characters.");
+            }
+
+            return airport;
+        }
+
+        private static DateTime ReadDate()
+        {
+            Console.Write("Enter date (yyyyMMdd): ");
+            var dateInput = Console.ReadLine();
+
+            if (dateInput.Length != 8 || !int.TryParse(dateInput.Substring(0, 4), out var year) || !int.TryParse(dateInput.Substring(4, 2), out var month) || !int.TryParse(dateInput.Substring(6, 2), out var day))
+            {
+                throw new Exception("Invalid date entered. Format must be YYYMMDD.");
+            }
+
+            return new DateTime(year, month, day);
         }
 
         private static DateTime ReadTime(DateTime date)
@@ -132,31 +167,6 @@ namespace NightCredits
             }
 
             return new DateTime(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Utc);
-        }
-
-        private static DateTime ReadDate()
-        {
-            Console.Write("Enter date (yyyyMMdd): ");
-            var dateInput = Console.ReadLine();
-
-            if (dateInput.Length != 8 || !int.TryParse(dateInput.Substring(0, 4), out var year) || !int.TryParse(dateInput.Substring(4, 2), out var month) || !int.TryParse(dateInput.Substring(6,2), out var day))
-            {
-                throw new Exception("Invalid date entered. Format must be YYYMMDD.");
-            }
-
-            return new DateTime(year, month, day);
-        }
-
-        private static string ReadAirportCode()
-        {
-            Console.Write("Enter airport ICAO code: ");
-            var airport = Console.ReadLine().ToUpper();
-            if (string.IsNullOrEmpty(airport) || airport.Length != 4)
-            {
-                throw new Exception("Invalid airport ICAO code entered. Aiport ICAO code must have 4 characters.");
-            }
-
-            return airport;
         }
     }
 }
