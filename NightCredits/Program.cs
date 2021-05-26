@@ -118,7 +118,7 @@ namespace NightCredits
 
         private static List<AirportModel> GetAirports()
         {
-            return JsonConvert.DeserializeObject<List<AirportModel>>(File.ReadAllText(@"airports.json"));
+            return JsonConvert.DeserializeObject<List<AirportModel>>(File.ReadAllText(@"data/airports.json"));
         }
 
         private static DateTime ReadTime(DateTime date)

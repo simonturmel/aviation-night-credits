@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NightCredits.Extensions;
+using System;
 using System.Globalization;
 
 namespace NightCredits.Models
