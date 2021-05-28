@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using CsvHelper;
+using Newtonsoft.Json;
 using NightCredits.Models;
 using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -11,7 +13,7 @@ namespace NightCredits
 {
     class Program
     {
-        private readonly static List<AirportModel> Airports = JsonConvert.DeserializeObject<List<AirportModel>>(File.ReadAllText(@"data/airports.json"));
+        private readonly static List<AirportModel> Airports = GetAirports();
 
         static void Main(string[] args)
         {
@@ -63,8 +65,23 @@ namespace NightCredits
             Console.WriteLine();
         }
 
-        private static AirportModel GetAirport(string airportCode)
+        private static List<AirportModel> GetAirports()
         {
+            var airports = new List<AirportModel>();
+
+            using (var reader = new StreamReader(@"data/airports.csv"))
+            {
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    airports = csv.GetRecords<AirportModel>().ToList();
+                }
+            }
+
+            return airports;
+        }
+
+        private static AirportModel GetAirport(string airportCode)
+        {            
             var airport =  Airports.FirstOrDefault(x => x.Code.ToUpper().Equals(airportCode));
             
             if (airport == null)

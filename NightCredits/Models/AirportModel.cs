@@ -1,15 +1,25 @@
-﻿using Newtonsoft.Json;
-using System.Linq;
+﻿using CsvHelper.Configuration.Attributes;
 
 namespace NightCredits.Models
 {
     public class AirportModel
     {
-        [JsonProperty("ident")]
+        [Name("ident")]
         public string Code { get; set; }
-        [JsonProperty("coordinates")]
-        public string Coordinates { get; set; }
-        public string Latitude => Coordinates.Split(',').Last().Trim();
-        public string Longitude => Coordinates.Split(',').First().Trim();
+
+        [Name("type")]
+        public string Type { get; set; }
+
+        [Name("name")]
+        public string Name { get; set; }
+
+        [Name("municipality")]
+        public string Municipality { get; set; }
+
+        [Name("latitude_deg")]
+        public string Latitude { get; set; }
+
+        [Name("longitude_deg")]
+        public string Longitude { get; set; }
     }
 }
