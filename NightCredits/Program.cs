@@ -11,9 +11,6 @@ using System.Net;
 
 namespace NightCredits
 {
-    /// <summary>
-    /// Test
-    /// </summary>
     class Program
     {
         private readonly static List<AirportModel> Airports = GetAirports();
